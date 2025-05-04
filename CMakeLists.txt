@@ -8,6 +8,6 @@ set(SOURCES_FILE ip_filter.cpp)
 add_executable(ip_filter_cli ${SOURCES_FILE})
 
 set_target_properties(ip_filter_cli PROPERTIES
-    CXX_STANDARD 14
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
