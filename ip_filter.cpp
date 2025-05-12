@@ -2,14 +2,14 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <stdexcept>
+#include <tuple>
 #include <vector>
+#include <limits>
+#include <algorithm>
 
-// ("",  '.') -> [""]
-// ("11", '.') -> ["11"]
-// ("..", '.') -> ["", "", ""]
-// ("11.", '.') -> ["11", ""]
-// (".11", '.') -> ["", "11"]
-// ("11.22", '.') -> ["11", "22"]
+using ip_struct = std::vector<std::tuple<uint32_t, std::vector<std::string>>>;
+
 std::vector<std::string> split(const std::string &str, char d)
 {
     std::vector<std::string> r;
@@ -29,96 +29,164 @@ std::vector<std::string> split(const std::string &str, char d)
     return r;
 }
 
+uint32_t ip_to_numeric(const std::vector<std::string>& ip_vector)
+{
+    const uint8_t ip_size = 4;
+    const uint8_t ip_offset = 8;
+
+    if (ip_vector.size() != ip_size)
+        throw std::runtime_error("Invalid IP address format: Incorrect number of octets.");
+
+    uint32_t result = 0;
+    for (uint8_t i = 0; i < ip_size; ++i)
+    {
+        try
+        {
+            int octet = std::stoi(ip_vector[i]);
+            if (!(octet >= std::numeric_limits<uint8_t>::min() && octet <= std::numeric_limits<uint8_t>::max()))
+                throw std::runtime_error("Invalid IP address format: Octet out of range.");
+            result = (result << ip_offset) | static_cast<uint32_t>(octet);
+        }
+        catch (const std::invalid_argument&)
+        {
+            throw std::runtime_error("Invalid IP address format: Non-numeric octet.");
+        }
+    }
+    return result;
+}
+
+void ip_print(ip_struct& ip_pool)
+{
+    for (const auto& [ip_numeric, ip_vector] : ip_pool)
+    {
+        bool first = true;
+        for (const auto& octet : ip_vector)
+        {
+            if (!first)
+                std::cout << ".";
+            std::cout << octet;
+                first = false;
+        }
+        std::cout << std::endl;
+    }
+}
+
+void ip_print_filter_first_byte(ip_struct& ip_pool, const uint8_t byte)
+{
+    const uint8_t ip_offset = 24;
+
+    for (const auto& [ip_numeric, ip_vector] : ip_pool)
+    {
+        if (((ip_numeric >> ip_offset) != byte))
+            continue;
+        bool first = true;
+        for (const auto& octet : ip_vector)
+        {
+            if (!first)
+                std::cout << ".";
+            std::cout << octet;
+            first = false;
+        }
+        std::cout << std::endl;
+    }
+}
+
+void ip_print_filter_first_and_second_byte(ip_struct& ip_pool, const uint8_t byteFirst, const uint8_t byteSecond)
+{
+    const uint8_t ip_offset_first = 24;
+    const uint8_t ip_offset_second = 16;
+
+    for (const auto& [ip_numeric, ip_vector] : ip_pool)
+    {
+        if (((ip_numeric >> ip_offset_first) != byteFirst) || (((ip_numeric >> ip_offset_second) & 0xFF) != byteSecond))
+            continue;
+        bool first = true;
+        for (const auto& octet : ip_vector)
+        {
+            if (!first)
+                std::cout << ".";
+            std::cout << octet;
+            first = false;
+        }
+        std::cout << std::endl;
+    }
+}
+
+void ip_print_filter_any(ip_struct& ip_pool, const uint8_t byte)
+{
+    uint8_t ip_iter = 0;
+    const uint8_t ip_size = 4;
+    const uint8_t ip_offset = 8;
+
+    for (const auto& [ip_numeric, ip_vector] : ip_pool)
+    {
+        bool include_byte = false;
+        for (uint8_t i = 0; i < ip_size; ++i)
+        {
+            if (((ip_numeric >> ip_iter & 0xFF) == byte))
+            {
+                include_byte = true;
+                continue;
+            }
+            ip_iter += ip_offset;
+        }
+        
+        if (!include_byte)
+            continue;
+
+        bool first = true;
+        for (const auto& octet : ip_vector)
+        {
+            if (!first)
+                std::cout << ".";
+            std::cout << octet;
+            first = false;
+        }
+        std::cout << std::endl;
+    }
+}
+
 int main(int argc, char const *argv[])
 {
     try
     {
-        std::vector<std::vector<std::string> > ip_pool;
+        ip_struct ip_pool;
 
         for(std::string line; std::getline(std::cin, line);)
         {
             std::vector<std::string> v = split(line, '\t');
-            ip_pool.push_back(split(v.at(0), '.'));
-        }
-
-        // TODO reverse lexicographically sort
-
-        for(std::vector<std::vector<std::string> >::const_iterator ip = ip_pool.cbegin(); ip != ip_pool.cend(); ++ip)
-        {
-            for(std::vector<std::string>::const_iterator ip_part = ip->cbegin(); ip_part != ip->cend(); ++ip_part)
+            if (!v.empty())
             {
-                if (ip_part != ip->cbegin())
+                std::vector<std::string> ip_vector = split(v.at(0), '.');
+                try
                 {
-                    std::cout << ".";
-
+                    uint32_t ip_numeric = ip_to_numeric(ip_vector);
+                    ip_pool.emplace_back(ip_numeric, ip_vector);
                 }
-                std::cout << *ip_part;
+                catch (const std::runtime_error& e)
+                {
+                    std::cerr << "Error processing IP address: " << e.what() << std::endl;
+                    continue;
+                }
             }
-            std::cout << std::endl;
         }
 
-        // 222.173.235.246
-        // 222.130.177.64
-        // 222.82.198.61
-        // ...
-        // 1.70.44.170
-        // 1.29.168.152
-        // 1.1.234.8
+        std::sort(ip_pool.begin(), ip_pool.end(), [](const auto& left, const auto& right)
+        {
+            return std::get<0>(left) > std::get<0>(right);
+        });
 
-        // TODO filter by first byte and output
-        // ip = filter(1)
+        // Reverse lexicographically sort
+        ip_print(ip_pool);
+        
+        // Filter by first byte and output
+        ip_print_filter_first_byte(ip_pool, 1);
 
-        // 1.231.69.33
-        // 1.87.203.225
-        // 1.70.44.170
-        // 1.29.168.152
-        // 1.1.234.8
+        // Filter by first and second bytes and output
+        ip_print_filter_first_and_second_byte(ip_pool, 46, 70);
 
-        // TODO filter by first and second bytes and output
-        // ip = filter(46, 70)
-
-        // 46.70.225.39
-        // 46.70.147.26
-        // 46.70.113.73
-        // 46.70.29.76
-
-        // TODO filter by any byte and output
-        // ip = filter_any(46)
-
-        // 186.204.34.46
-        // 186.46.222.194
-        // 185.46.87.231
-        // 185.46.86.132
-        // 185.46.86.131
-        // 185.46.86.131
-        // 185.46.86.22
-        // 185.46.85.204
-        // 185.46.85.78
-        // 68.46.218.208
-        // 46.251.197.23
-        // 46.223.254.56
-        // 46.223.254.56
-        // 46.182.19.219
-        // 46.161.63.66
-        // 46.161.61.51
-        // 46.161.60.92
-        // 46.161.60.35
-        // 46.161.58.202
-        // 46.161.56.241
-        // 46.161.56.203
-        // 46.161.56.174
-        // 46.161.56.106
-        // 46.161.56.106
-        // 46.101.163.119
-        // 46.101.127.145
-        // 46.70.225.39
-        // 46.70.147.26
-        // 46.70.113.73
-        // 46.70.29.76
-        // 46.55.46.98
-        // 46.49.43.85
-        // 39.46.86.85
-        // 5.189.203.46
+        // Filter by any byte and output
+        ip_print_filter_any(ip_pool, 46);
     }
     catch(const std::exception &e)
     {
