@@ -4,9 +4,8 @@
 #include <stdexcept>
 #include <tuple>
 #include <limits>
+#include <cstdint>
 #include "ip_filter.h"
-
-using ip_struct = std::vector<std::tuple<uint32_t, std::vector<std::string>>>;
 
 std::vector<std::string> split(const std::string &str, char d)
 {
