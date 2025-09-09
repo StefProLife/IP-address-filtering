@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <cstdint>
 
 using ip_struct = std::vector<std::tuple<uint32_t, std::vector<std::string>>>;
 

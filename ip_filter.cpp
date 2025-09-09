@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <tuple>
 #include <limits>
-#include <cstdint>
 #include "ip_filter.h"
 
 std::vector<std::string> split(const std::string &str, char d)
