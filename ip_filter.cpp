@@ -1,12 +1,10 @@
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
-#include <iostream>
-#include <string>
 #include <stdexcept>
 #include <tuple>
-#include <vector>
 #include <limits>
-#include <algorithm>
+#include "ip_filter.h"
 
 using ip_struct = std::vector<std::tuple<uint32_t, std::vector<std::string>>>;
 
@@ -53,6 +51,14 @@ uint32_t ip_to_numeric(const std::vector<std::string>& ip_vector)
         }
     }
     return result;
+}
+
+void sort(ip_struct& ip_pool)
+{
+    std::sort(ip_pool.begin(), ip_pool.end(), [](const auto& left, const auto& right)
+    {
+        return std::get<0>(left) > std::get<0>(right);
+    });
 }
 
 void ip_print(ip_struct& ip_pool)
@@ -144,54 +150,4 @@ void ip_print_filter_any(ip_struct& ip_pool, const uint8_t byte)
         }
         std::cout << std::endl;
     }
-}
-
-int main(int argc, char const *argv[])
-{
-    try
-    {
-        ip_struct ip_pool;
-
-        for(std::string line; std::getline(std::cin, line);)
-        {
-            std::vector<std::string> v = split(line, '\t');
-            if (!v.empty())
-            {
-                std::vector<std::string> ip_vector = split(v.at(0), '.');
-                try
-                {
-                    uint32_t ip_numeric = ip_to_numeric(ip_vector);
-                    ip_pool.emplace_back(ip_numeric, ip_vector);
-                }
-                catch (const std::runtime_error& e)
-                {
-                    std::cerr << "Error processing IP address: " << e.what() << std::endl;
-                    continue;
-                }
-            }
-        }
-
-        std::sort(ip_pool.begin(), ip_pool.end(), [](const auto& left, const auto& right)
-        {
-            return std::get<0>(left) > std::get<0>(right);
-        });
-
-        // Reverse lexicographically sort
-        ip_print(ip_pool);
-        
-        // Filter by first byte and output
-        ip_print_filter_first_byte(ip_pool, 1);
-
-        // Filter by first and second bytes and output
-        ip_print_filter_first_and_second_byte(ip_pool, 46, 70);
-
-        // Filter by any byte and output
-        ip_print_filter_any(ip_pool, 46);
-    }
-    catch(const std::exception &e)
-    {
-        std::cerr << e.what() << std::endl;
-    }
-
-    return 0;
 }
