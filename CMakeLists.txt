@@ -32,12 +32,12 @@ if (WITH_GOOGLE_TEST)
     find_package(GTest REQUIRED)
     add_executable(gtest_ip_filter gtest_ip_filter.cpp)
     
-    set_target_properties(gtest_version PROPERTIES
+    set_target_properties(gtest_ip_filter PROPERTIES
         CXX_STANDARD 17
         CXX_STANDARD_REQUIRED ON
     )
     
-    target_link_libraries(gtest_version
+    target_link_libraries(gtest_ip_filter
         GTest::gtest_main 
         ip_filter
     )
