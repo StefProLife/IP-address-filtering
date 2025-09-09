@@ -19,7 +19,7 @@ TEST(TestIPFilter, TestSplit)
 
     ASSERT_EQ(expected.size(), actual.size());
     for (int item = 0; item < expected.size() - 1; item++)
-        ASSERT_EQ(expected[item], actual[item])
+        ASSERT_EQ(expected[item], actual[item]);
 }
 
 
