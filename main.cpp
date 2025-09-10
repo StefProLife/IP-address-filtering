@@ -26,6 +26,7 @@ int main(int argc, char const* argv[])
         }
 
         // Reverse lexicographically sort
+        sort(ip_pool);
         ip_print(ip_pool);
 
         // Filter by first byte and output
